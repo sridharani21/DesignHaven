@@ -1169,6 +1169,13 @@ function updateCartCount() {
 }
 
 function addToCart(productId) {
+    // Check if user is logged in
+    if (!currentUser) {
+        alert('Please login to add products to cart!');
+        window.location.href = 'login.html';
+        return;
+    }
+    
     const product = products.find(p => p.id === productId);
     if (!product) return;
     
@@ -1259,6 +1266,13 @@ function loadCart() {
 }
 
 function loadCheckout() {
+    // Check if user is logged in
+    if (!currentUser) {
+        alert('Please login to proceed to checkout!');
+        window.location.href = 'login.html';
+        return;
+    }
+    
     const checkoutItems = document.getElementById('checkoutItems');
     const checkoutSubtotal = document.getElementById('checkoutSubtotal');
     const checkoutTotal = document.getElementById('checkoutTotal');
@@ -1408,6 +1422,14 @@ const placeOrderBtn = document.getElementById('placeOrderBtn');
 if (placeOrderBtn) {
     placeOrderBtn.addEventListener('click', (e) => {
         e.preventDefault();
+        
+        // Check if user is logged in
+        if (!currentUser) {
+            alert('Please login to place an order!');
+            window.location.href = 'login.html';
+            return;
+        }
+        
         const addressForm = document.getElementById('addressForm');
         if (!addressForm.checkValidity()) {
             addressForm.reportValidity();
@@ -1497,6 +1519,13 @@ if (window.location.search.includes('payment=success')) {
 const checkoutBtn = document.getElementById('checkoutBtn');
 if (checkoutBtn) {
     checkoutBtn.addEventListener('click', () => {
+        // Check if user is logged in
+        if (!currentUser) {
+            alert('Please login to proceed to checkout!');
+            window.location.href = 'login.html';
+            return;
+        }
+        
         if (cart.length === 0) {
             alert('Your cart is empty!');
             return;
