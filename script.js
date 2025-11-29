@@ -24,18 +24,42 @@ let products = [];
 let useFirebase = false;
 let database = null;
 
-try {
-    if (typeof firebase !== 'undefined' && firebase.database) {
-        database = firebase.database();
-        useFirebase = true;
-        console.log('Firebase connected - using cloud database for cross-device sync');
+// Wait for Firebase to be ready
+function initFirebase() {
+    try {
+        if (typeof firebase !== 'undefined' && firebase.database) {
+            database = firebase.database();
+            useFirebase = true;
+            console.log('✅ Firebase connected - using cloud database for cross-device sync');
+            return true;
+        } else {
+            console.log('⚠️ Firebase not available - using localStorage (device-specific)');
+            return false;
+        }
+    } catch (e) {
+        console.error('❌ Firebase initialization error:', e);
+        console.log('Falling back to localStorage');
+        return false;
     }
-} catch (e) {
-    console.log('Firebase not configured - using localStorage (device-specific)');
+}
+
+// Initialize Firebase connection
+if (typeof firebase !== 'undefined') {
+    // Firebase SDK is loaded, try to connect
+    setTimeout(() => {
+        initFirebase();
+    }, 100); // Small delay to ensure Firebase is fully loaded
+} else {
+    console.log('⚠️ Firebase SDK not loaded - using localStorage only');
 }
 
 // Load data from Firebase or localStorage
 async function loadDataFromStorage() {
+    // Ensure Firebase is initialized
+    if (!useFirebase && typeof firebase !== 'undefined') {
+        initFirebase();
+    }
+    
     if (useFirebase && database) {
         try {
             // Load from Firebase (syncs across all devices)
@@ -201,6 +225,11 @@ async function saveData() {
         // Validate and sanitize data before saving
         validateData();
         
+        // Ensure Firebase is initialized
+        if (!useFirebase && typeof firebase !== 'undefined') {
+            initFirebase();
+        }
+        
         // Save to Firebase if available (syncs across ALL devices)
         if (useFirebase && database) {
             try {
@@ -272,6 +301,11 @@ function saveToLocalStorage() {
 
 // Reload data from Firebase or localStorage
 async function reloadData() {
+    // Ensure Firebase is initialized
+    if (!useFirebase && typeof firebase !== 'undefined') {
+        initFirebase();
+    }
+    
     if (useFirebase && database) {
         try {
             // Firebase automatically syncs, but we can force a refresh
@@ -872,6 +906,11 @@ function populateCategoryFilter() {
 
 // Initialize page based on current page
 document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize Firebase first
+    if (typeof firebase !== 'undefined') {
+        initFirebase();
+    }
+    
     // Wait for data to load (Firebase or localStorage)
     await loadDataFromStorage();
     
