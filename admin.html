@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - DesignHaven</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="nav-wrapper">
+                <div class="logo">
+                    <h1>DesignHaven</h1>
+                </div>
+                <nav class="nav-menu">
+                    <a href="index.html" class="nav-link">Home</a>
+                    <a href="categories.html" class="nav-link">Categories</a>
+                    <a href="products.html" class="nav-link">Products</a>
+                    <a href="#" class="nav-link" id="logoutLink">Logout</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="admin-section">
+            <div class="container">
+                <h1 class="page-title">Admin Panel</h1>
+                
+                <!-- Offer Banner Management -->
+                <div class="admin-card">
+                    <h2>Offer Banner</h2>
+                    <form id="bannerForm" class="admin-form">
+                        <div class="form-group">
+                            <label for="bannerText">Banner Text</label>
+                            <input type="text" id="bannerText" placeholder="Enter offer banner text">
+                        </div>
+                        <button type="submit" class="btn-primary">Update Banner</button>
+                        <button type="button" class="btn-secondary" onclick="removeBanner()">Remove Banner</button>
+                    </form>
+                </div>
+
+                <!-- Category Management -->
+                <div class="admin-card">
+                    <h2>Manage Categories</h2>
+                    <form id="categoryForm" class="admin-form">
+                        <div class="form-group">
+                            <label for="categoryName">Category Name</label>
+                            <input type="text" id="categoryName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="categoryImage">Category Image URL</label>
+                            <input type="url" id="categoryImage" required>
+                        </div>
+                        <input type="hidden" id="categoryId">
+                        <button type="submit" class="btn-primary" id="categorySubmitBtn">Add Category</button>
+                        <button type="button" class="btn-secondary" onclick="resetCategoryForm()">Cancel</button>
+                    </form>
+                    <div class="admin-list" id="categoriesList">
+                        <!-- Categories list will be loaded dynamically -->
+                    </div>
+                </div>
+
+                <!-- Order Management -->
+                <div class="admin-card">
+                    <h2>Product Orders</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">View and manage all customer orders</p>
+                    <div class="admin-orders-container" id="ordersList">
+                        <!-- Orders will be loaded dynamically -->
+                    </div>
+                </div>
+
+                <!-- Product Management -->
+                <div class="admin-card">
+                    <h2>Manage Products</h2>
+                    <form id="productForm" class="admin-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="productName">Product Name</label>
+                                <input type="text" id="productName" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="productPrice">Price (₹)</label>
+                                <input type="number" id="productPrice" step="0.01" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="productCategory">Category</label>
+                            <select id="productCategory" required>
+                                <option value="">Select Category</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="productImage">Product Image URL</label>
+                            <input type="url" id="productImage" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="productDescription">Description</label>
+                            <textarea id="productDescription" rows="4" required></textarea>
+                        </div>
+                        <input type="hidden" id="productId">
+                        <button type="submit" class="btn-primary" id="productSubmitBtn">Add Product</button>
+                        <button type="button" class="btn-secondary" onclick="resetProductForm()">Cancel</button>
+                    </form>
+                    <div class="admin-list" id="productsList">
+                        <!-- Products list will be loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>DesignHaven</h3>
+                    <p>Creating beautiful designs for every occasion</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="categories.html">Categories</a></li>
+                        <li><a href="products.html">All Products</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 DesignHaven. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
+

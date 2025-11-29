@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful - DesignHaven</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="nav-wrapper">
+                <div class="logo">
+                    <h1>DesignHaven</h1>
+                </div>
+                <nav class="nav-menu">
+                    <a href="index.html" class="nav-link">Home</a>
+                    <a href="categories.html" class="nav-link">Categories</a>
+                    <a href="products.html" class="nav-link">Products</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="payment-success-section">
+            <div class="container">
+                <div class="success-card">
+                    <div class="success-icon">✓</div>
+                    <h1>Payment Successful!</h1>
+                    <p class="success-message">Your payment has been received successfully.</p>
+                    <div id="orderInfo" class="order-info-success">
+                        <!-- Order info will be loaded -->
+                    </div>
+                    <div class="success-actions">
+                        <a href="order-tracking.html" id="trackOrderLink" class="btn-primary">Track Your Order</a>
+                        <a href="index.html" class="btn-secondary">Continue Shopping</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>DesignHaven</h3>
+                    <p>Creating beautiful designs for every occasion</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 DesignHaven. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('orderId');
+        if (orderId) {
+            document.getElementById('trackOrderLink').href = `order-tracking.html?id=${orderId}`;
+            document.getElementById('orderInfo').innerHTML = `
+                <p><strong>Order ID:</strong> ${orderId}</p>
+                <p>Your order has been placed and will be processed shortly.</p>
+            `;
+        }
+    </script>
+</body>
+</html>
+
