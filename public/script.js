@@ -1062,11 +1062,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else if (currentPage === 'order-tracking.html') {
         loadOrderTracking();
     } else if (currentPage === 'orders.html') {
-        loadOrders();
+        await loadOrders();
     } else if (currentPage === 'admin.html') {
         loadCategoriesList();
         loadProductsList();
-        loadAdminOrders();
+        await loadAdminOrders();
         populateCategoryDropdown();
         const bannerTextInput = document.getElementById('bannerText');
         if (bannerTextInput && offerBanner && offerBanner.text) {
@@ -1096,12 +1096,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateCartCount();
     
     // Refresh page content when data is updated
-    function refreshPageContent() {
+    async function refreshPageContent() {
         const currentPath = window.location.pathname.toLowerCase();
         const currentPage = currentPath.split('/').pop() || 'index.html';
         
         // Reload data first
-        reloadData();
+        await reloadData();
         
         // Refresh display based on current page
         if (currentPage === 'index.html' || currentPage === '' || !currentPage.includes('.')) {
@@ -1119,10 +1119,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (currentPage === 'admin.html') {
             loadCategoriesList();
             loadProductsList();
-            loadAdminOrders();
+            await loadAdminOrders();
             displayOfferBanner();
         } else if (currentPage === 'orders.html') {
-            loadOrders();
+            await loadOrders();
         }
     }
     
@@ -1420,7 +1420,7 @@ function openPaymentAppForOrder(app, amount) {
 // Checkout form submission
 const placeOrderBtn = document.getElementById('placeOrderBtn');
 if (placeOrderBtn) {
-    placeOrderBtn.addEventListener('click', (e) => {
+    placeOrderBtn.addEventListener('click', async (e) => {
         e.preventDefault();
         
         // Check if user is logged in
@@ -1483,10 +1483,12 @@ if (placeOrderBtn) {
         if (paymentMethod.value === 'cod') {
             // Cash on Delivery
             orders.push(order);
-            saveData();
+            await saveData();
+            // Reload data to ensure it's saved
+            await reloadData();
             alert(`Order placed successfully! Order ID: ${orderId}. You will pay on delivery.`);
             cart = [];
-            saveData();
+            await saveData();
             updateCartCount();
             window.location.href = `order-tracking.html?id=${orderId}`;
         } else {
@@ -1752,14 +1754,15 @@ function generateUPIQRForOrder(amount, canvasId) {
     }
 }
 
-function confirmOnlinePayment(orderId) {
+async function confirmOnlinePayment(orderId) {
     const order = orders.find(o => o.id === orderId);
     if (order) {
         order.paymentMethod = 'online';
-        saveData();
+        await saveData();
+        await reloadData();
         alert('Payment method updated to online!');
         closePaymentModal();
-        loadOrders();
+        await loadOrders();
     }
 }
 
@@ -1775,9 +1778,12 @@ window.confirmOnlinePayment = confirmOnlinePayment;
 window.closePaymentModal = closePaymentModal;
 window.openPaymentAppForOrder = openPaymentAppForOrder;
 
-function loadAdminOrders() {
+async function loadAdminOrders() {
     const container = document.getElementById('ordersList');
     if (!container) return;
+    
+    // Reload orders data first to ensure we have the latest
+    await reloadData();
     
     if (orders.length === 0) {
         container.innerHTML = '<p style="text-align: center; padding: 2rem; color: var(--text-secondary);">No orders yet.</p>';
@@ -1898,13 +1904,14 @@ function generateReceipt(orderId) {
     receiptWindow.print();
 }
 
-function updateOrderStatus(orderId, newStatus) {
+async function updateOrderStatus(orderId, newStatus) {
     const order = orders.find(o => o.id === orderId);
     if (order) {
         order.status = newStatus;
-        saveData();
+        await saveData();
+        await reloadData();
         alert('Order status updated successfully!');
-        loadAdminOrders();
+        await loadAdminOrders();
         
         // Force refresh customer pages if open
         window.dispatchEvent(new CustomEvent('dataUpdated'));
