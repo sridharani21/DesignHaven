@@ -15,18 +15,65 @@ try {
     users = [];
     localStorage.setItem('users', JSON.stringify(users));
 }
-let categories = JSON.parse(localStorage.getItem('categories')) || [
-    { id: 1, name: 'Posters', image: 'https://images.unsplash.com/photo-1584824486509-112e4181ff6b?w=400' },
-    { id: 2, name: 'Customized Designs', image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400' },
-    { id: 3, name: 'Wall Art', image: 'https://images.unsplash.com/photo-1578301978018-3005759f48f7?w=400' },
-    { id: 4, name: 'Digital Prints', image: 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400' }
-];
-let products = JSON.parse(localStorage.getItem('products')) || [
-    { id: 1, name: 'Vintage Poster Collection', price: 2499, category: 'Posters', image: 'https://images.unsplash.com/photo-1584824486509-112e4181ff6b?w=400', description: 'Beautiful vintage-inspired poster collection perfect for any room.' },
-    { id: 2, name: 'Custom Portrait Design', price: 4199, category: 'Customized Designs', image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400', description: 'Personalized portrait design created just for you.' },
-    { id: 3, name: 'Modern Abstract Art', price: 3399, category: 'Wall Art', image: 'https://images.unsplash.com/photo-1578301978018-3005759f48f7?w=400', description: 'Contemporary abstract art piece to enhance your space.' },
-    { id: 4, name: 'Nature Photography Print', price: 2099, category: 'Digital Prints', image: 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400', description: 'High-quality nature photography print in stunning detail.' }
-];
+// Load categories with proper error handling
+let categories = [];
+try {
+    const storedCategories = localStorage.getItem('categories');
+    if (storedCategories) {
+        categories = JSON.parse(storedCategories);
+        if (!Array.isArray(categories)) {
+            categories = [];
+        }
+    }
+    // Only use default categories if localStorage is empty
+    if (categories.length === 0) {
+        categories = [
+            { id: 1, name: 'Posters', image: 'https://images.unsplash.com/photo-1584824486509-112e4181ff6b?w=400' },
+            { id: 2, name: 'Customized Designs', image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400' },
+            { id: 3, name: 'Wall Art', image: 'https://images.unsplash.com/photo-1578301978018-3005759f48f7?w=400' },
+            { id: 4, name: 'Digital Prints', image: 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400' }
+        ];
+        localStorage.setItem('categories', JSON.stringify(categories));
+    }
+} catch (e) {
+    categories = [
+        { id: 1, name: 'Posters', image: 'https://images.unsplash.com/photo-1584824486509-112e4181ff6b?w=400' },
+        { id: 2, name: 'Customized Designs', image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400' },
+        { id: 3, name: 'Wall Art', image: 'https://images.unsplash.com/photo-1578301978018-3005759f48f7?w=400' },
+        { id: 4, name: 'Digital Prints', image: 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400' }
+    ];
+    localStorage.setItem('categories', JSON.stringify(categories));
+}
+
+// Load products with proper error handling
+let products = [];
+try {
+    const storedProducts = localStorage.getItem('products');
+    if (storedProducts) {
+        products = JSON.parse(storedProducts);
+        if (!Array.isArray(products)) {
+            products = [];
+        }
+    }
+    // Only use default products if localStorage is empty
+    if (products.length === 0) {
+        products = [
+            { id: 1, name: 'Vintage Poster Collection', price: 2499, category: 'Posters', image: 'https://images.unsplash.com/photo-1584824486509-112e4181ff6b?w=400', description: 'Beautiful vintage-inspired poster collection perfect for any room.' },
+            { id: 2, name: 'Custom Portrait Design', price: 4199, category: 'Customized Designs', image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400', description: 'Personalized portrait design created just for you.' },
+            { id: 3, name: 'Modern Abstract Art', price: 3399, category: 'Wall Art', image: 'https://images.unsplash.com/photo-1578301978018-3005759f48f7?w=400', description: 'Contemporary abstract art piece to enhance your space.' },
+            { id: 4, name: 'Nature Photography Print', price: 2099, category: 'Digital Prints', image: 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400', description: 'High-quality nature photography print in stunning detail.' }
+        ];
+        localStorage.setItem('products', JSON.stringify(products));
+    }
+} catch (e) {
+    products = [
+        { id: 1, name: 'Vintage Poster Collection', price: 2499, category: 'Posters', image: 'https://images.unsplash.com/photo-1584824486509-112e4181ff6b?w=400', description: 'Beautiful vintage-inspired poster collection perfect for any room.' },
+        { id: 2, name: 'Custom Portrait Design', price: 4199, category: 'Customized Designs', image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400', description: 'Personalized portrait design created just for you.' },
+        { id: 3, name: 'Modern Abstract Art', price: 3399, category: 'Wall Art', image: 'https://images.unsplash.com/photo-1578301978018-3005759f48f7?w=400', description: 'Contemporary abstract art piece to enhance your space.' },
+        { id: 4, name: 'Nature Photography Print', price: 2099, category: 'Digital Prints', image: 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400', description: 'High-quality nature photography print in stunning detail.' }
+    ];
+    localStorage.setItem('products', JSON.stringify(products));
+}
 let reviews = JSON.parse(localStorage.getItem('reviews')) || {};
 let offerBanner = JSON.parse(localStorage.getItem('offerBanner')) || null;
 let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
@@ -36,15 +83,73 @@ let orders = JSON.parse(localStorage.getItem('orders')) || [];
 
 // Save data to localStorage
 function saveData() {
-    localStorage.setItem('users', JSON.stringify(users));
-    localStorage.setItem('categories', JSON.stringify(categories));
-    localStorage.setItem('products', JSON.stringify(products));
-    localStorage.setItem('reviews', JSON.stringify(reviews));
-    localStorage.setItem('offerBanner', JSON.stringify(offerBanner));
-    localStorage.setItem('currentUser', JSON.stringify(currentUser));
-    localStorage.setItem('cart', JSON.stringify(cart));
-    localStorage.setItem('userAddresses', JSON.stringify(userAddresses));
-    localStorage.setItem('orders', JSON.stringify(orders));
+    try {
+        localStorage.setItem('users', JSON.stringify(users));
+        localStorage.setItem('categories', JSON.stringify(categories));
+        localStorage.setItem('products', JSON.stringify(products));
+        localStorage.setItem('reviews', JSON.stringify(reviews));
+        localStorage.setItem('offerBanner', JSON.stringify(offerBanner));
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        localStorage.setItem('cart', JSON.stringify(cart));
+        localStorage.setItem('userAddresses', JSON.stringify(userAddresses));
+        localStorage.setItem('orders', JSON.stringify(orders));
+        
+        // Trigger storage event for cross-tab sync
+        window.dispatchEvent(new Event('storage'));
+        
+        // Also trigger custom event for same-tab updates
+        window.dispatchEvent(new CustomEvent('dataUpdated', { 
+            detail: { 
+                categories, 
+                products, 
+                offerBanner,
+                orders 
+            } 
+        }));
+    } catch (e) {
+        console.error('Error saving data:', e);
+        alert('Error saving data. Please check browser storage permissions.');
+    }
+}
+
+// Reload data from localStorage
+function reloadData() {
+    try {
+        // Reload categories
+        const storedCategories = localStorage.getItem('categories');
+        if (storedCategories) {
+            const parsed = JSON.parse(storedCategories);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                categories = parsed;
+            }
+        }
+        
+        // Reload products
+        const storedProducts = localStorage.getItem('products');
+        if (storedProducts) {
+            const parsed = JSON.parse(storedProducts);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                products = parsed;
+            }
+        }
+        
+        // Reload offer banner
+        const storedBanner = localStorage.getItem('offerBanner');
+        if (storedBanner) {
+            offerBanner = JSON.parse(storedBanner);
+        }
+        
+        // Reload orders
+        const storedOrders = localStorage.getItem('orders');
+        if (storedOrders) {
+            const parsed = JSON.parse(storedOrders);
+            if (Array.isArray(parsed)) {
+                orders = parsed;
+            }
+        }
+    } catch (e) {
+        console.error('Error reloading data:', e);
+    }
 }
 
 // Check if user is admin
@@ -443,7 +548,10 @@ if (categoryForm) {
         saveData();
         loadCategoriesList();
         resetCategoryForm();
-        alert('Category saved successfully!');
+        alert('Category saved successfully! Changes will be reflected on customer pages.');
+        
+        // Force refresh customer pages if open
+        window.dispatchEvent(new CustomEvent('dataUpdated'));
     });
 }
 
@@ -523,7 +631,10 @@ if (productForm) {
         saveData();
         loadProductsList();
         resetProductForm();
-        alert('Product saved successfully!');
+        alert('Product saved successfully! Changes will be reflected on customer pages.');
+        
+        // Force refresh customer pages if open
+        window.dispatchEvent(new CustomEvent('dataUpdated'));
     });
 }
 
@@ -1227,6 +1338,9 @@ function updateOrderStatus(orderId, newStatus) {
         saveData();
         alert('Order status updated successfully!');
         loadAdminOrders();
+        
+        // Force refresh customer pages if open
+        window.dispatchEvent(new CustomEvent('dataUpdated'));
     }
 }
 
