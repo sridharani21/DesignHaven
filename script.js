@@ -15,63 +15,70 @@ try {
     users = [];
     localStorage.setItem('users', JSON.stringify(users));
 }
-// Load categories with proper error handling
+// Default data (only used if localStorage is completely empty)
+const defaultCategories = [
+    { id: 1, name: 'Posters', image: 'https://images.unsplash.com/photo-1584824486509-112e4181ff6b?w=400' },
+    { id: 2, name: 'Customized Designs', image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400' },
+    { id: 3, name: 'Wall Art', image: 'https://images.unsplash.com/photo-1578301978018-3005759f48f7?w=400' },
+    { id: 4, name: 'Digital Prints', image: 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400' }
+];
+
+const defaultProducts = [
+    { id: 1, name: 'Vintage Poster Collection', price: 2499, category: 'Posters', image: 'https://images.unsplash.com/photo-1584824486509-112e4181ff6b?w=400', description: 'Beautiful vintage-inspired poster collection perfect for any room.' },
+    { id: 2, name: 'Custom Portrait Design', price: 4199, category: 'Customized Designs', image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400', description: 'Personalized portrait design created just for you.' },
+    { id: 3, name: 'Modern Abstract Art', price: 3399, category: 'Wall Art', image: 'https://images.unsplash.com/photo-1578301978018-3005759f48f7?w=400', description: 'Contemporary abstract art piece to enhance your space.' },
+    { id: 4, name: 'Nature Photography Print', price: 2099, category: 'Digital Prints', image: 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400', description: 'High-quality nature photography print in stunning detail.' }
+];
+
+// Load categories - ONLY use defaults if localStorage key doesn't exist at all
 let categories = [];
 try {
     const storedCategories = localStorage.getItem('categories');
-    if (storedCategories) {
-        categories = JSON.parse(storedCategories);
-        if (!Array.isArray(categories)) {
-            categories = [];
+    if (storedCategories !== null && storedCategories !== undefined) {
+        // Key exists, parse the data
+        const parsed = JSON.parse(storedCategories);
+        if (Array.isArray(parsed)) {
+            categories = parsed; // Use saved data, even if empty array
+        } else {
+            // Invalid data, use defaults
+            categories = [...defaultCategories];
+            localStorage.setItem('categories', JSON.stringify(categories));
         }
-    }
-    // Only use default categories if localStorage is empty
-    if (categories.length === 0) {
-        categories = [
-            { id: 1, name: 'Posters', image: 'https://images.unsplash.com/photo-1584824486509-112e4181ff6b?w=400' },
-            { id: 2, name: 'Customized Designs', image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400' },
-            { id: 3, name: 'Wall Art', image: 'https://images.unsplash.com/photo-1578301978018-3005759f48f7?w=400' },
-            { id: 4, name: 'Digital Prints', image: 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400' }
-        ];
+    } else {
+        // Key doesn't exist, first time - use defaults
+        categories = [...defaultCategories];
         localStorage.setItem('categories', JSON.stringify(categories));
     }
 } catch (e) {
-    categories = [
-        { id: 1, name: 'Posters', image: 'https://images.unsplash.com/photo-1584824486509-112e4181ff6b?w=400' },
-        { id: 2, name: 'Customized Designs', image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400' },
-        { id: 3, name: 'Wall Art', image: 'https://images.unsplash.com/photo-1578301978018-3005759f48f7?w=400' },
-        { id: 4, name: 'Digital Prints', image: 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400' }
-    ];
+    console.error('Error loading categories:', e);
+    // On error, use defaults
+    categories = [...defaultCategories];
     localStorage.setItem('categories', JSON.stringify(categories));
 }
 
-// Load products with proper error handling
+// Load products - ONLY use defaults if localStorage key doesn't exist at all
 let products = [];
 try {
     const storedProducts = localStorage.getItem('products');
-    if (storedProducts) {
-        products = JSON.parse(storedProducts);
-        if (!Array.isArray(products)) {
-            products = [];
+    if (storedProducts !== null && storedProducts !== undefined) {
+        // Key exists, parse the data
+        const parsed = JSON.parse(storedProducts);
+        if (Array.isArray(parsed)) {
+            products = parsed; // Use saved data, even if empty array
+        } else {
+            // Invalid data, use defaults
+            products = [...defaultProducts];
+            localStorage.setItem('products', JSON.stringify(products));
         }
-    }
-    // Only use default products if localStorage is empty
-    if (products.length === 0) {
-        products = [
-            { id: 1, name: 'Vintage Poster Collection', price: 2499, category: 'Posters', image: 'https://images.unsplash.com/photo-1584824486509-112e4181ff6b?w=400', description: 'Beautiful vintage-inspired poster collection perfect for any room.' },
-            { id: 2, name: 'Custom Portrait Design', price: 4199, category: 'Customized Designs', image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400', description: 'Personalized portrait design created just for you.' },
-            { id: 3, name: 'Modern Abstract Art', price: 3399, category: 'Wall Art', image: 'https://images.unsplash.com/photo-1578301978018-3005759f48f7?w=400', description: 'Contemporary abstract art piece to enhance your space.' },
-            { id: 4, name: 'Nature Photography Print', price: 2099, category: 'Digital Prints', image: 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400', description: 'High-quality nature photography print in stunning detail.' }
-        ];
+    } else {
+        // Key doesn't exist, first time - use defaults
+        products = [...defaultProducts];
         localStorage.setItem('products', JSON.stringify(products));
     }
 } catch (e) {
-    products = [
-        { id: 1, name: 'Vintage Poster Collection', price: 2499, category: 'Posters', image: 'https://images.unsplash.com/photo-1584824486509-112e4181ff6b?w=400', description: 'Beautiful vintage-inspired poster collection perfect for any room.' },
-        { id: 2, name: 'Custom Portrait Design', price: 4199, category: 'Customized Designs', image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400', description: 'Personalized portrait design created just for you.' },
-        { id: 3, name: 'Modern Abstract Art', price: 3399, category: 'Wall Art', image: 'https://images.unsplash.com/photo-1578301978018-3005759f48f7?w=400', description: 'Contemporary abstract art piece to enhance your space.' },
-        { id: 4, name: 'Nature Photography Print', price: 2099, category: 'Digital Prints', image: 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400', description: 'High-quality nature photography print in stunning detail.' }
-    ];
+    console.error('Error loading products:', e);
+    // On error, use defaults
+    products = [...defaultProducts];
     localStorage.setItem('products', JSON.stringify(products));
 }
 let reviews = JSON.parse(localStorage.getItem('reviews')) || {};
@@ -115,33 +122,39 @@ function saveData() {
 // Reload data from localStorage
 function reloadData() {
     try {
-        // Reload categories
+        // Reload categories - always use what's in localStorage, even if empty
         const storedCategories = localStorage.getItem('categories');
-        if (storedCategories) {
+        if (storedCategories !== null && storedCategories !== undefined) {
             const parsed = JSON.parse(storedCategories);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-                categories = parsed;
+            if (Array.isArray(parsed)) {
+                categories = parsed; // Use saved data, even if empty
             }
         }
         
-        // Reload products
+        // Reload products - always use what's in localStorage, even if empty
         const storedProducts = localStorage.getItem('products');
-        if (storedProducts) {
+        if (storedProducts !== null && storedProducts !== undefined) {
             const parsed = JSON.parse(storedProducts);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-                products = parsed;
+            if (Array.isArray(parsed)) {
+                products = parsed; // Use saved data, even if empty
             }
         }
         
         // Reload offer banner
         const storedBanner = localStorage.getItem('offerBanner');
-        if (storedBanner) {
-            offerBanner = JSON.parse(storedBanner);
+        if (storedBanner !== null && storedBanner !== undefined) {
+            try {
+                offerBanner = JSON.parse(storedBanner);
+            } catch (e) {
+                offerBanner = null;
+            }
+        } else {
+            offerBanner = null;
         }
         
         // Reload orders
         const storedOrders = localStorage.getItem('orders');
-        if (storedOrders) {
+        if (storedOrders !== null && storedOrders !== undefined) {
             const parsed = JSON.parse(storedOrders);
             if (Array.isArray(parsed)) {
                 orders = parsed;
@@ -514,8 +527,16 @@ function editCategory(id) {
 function deleteCategory(id) {
     if (confirm('Are you sure you want to delete this category?')) {
         categories = categories.filter(c => c.id !== id);
+        // Also remove products in this category
+        products = products.filter(p => p.category !== categories.find(c => c.id === id)?.name);
         saveData();
         loadCategoriesList();
+        
+        // Force refresh customer pages
+        window.dispatchEvent(new CustomEvent('dataUpdated'));
+        
+        // Also reload data to ensure consistency
+        reloadData();
     }
 }
 
