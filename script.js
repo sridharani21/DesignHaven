@@ -17,61 +17,124 @@ try {
 }
 // Load categories - No defaults, start empty
 let categories = [];
+// Load products - No defaults, start empty
+let products = [];
+
+// Check if Firebase is available and configured
+let useFirebase = false;
+let database = null;
+
 try {
-    const storedCategories = localStorage.getItem('categories');
-    if (storedCategories !== null && storedCategories !== undefined) {
-        // Key exists, parse the data
-        const parsed = JSON.parse(storedCategories);
-        if (Array.isArray(parsed)) {
-            categories = parsed; // Use saved data, even if empty array
+    if (typeof firebase !== 'undefined' && firebase.database) {
+        database = firebase.database();
+        useFirebase = true;
+        console.log('Firebase connected - using cloud database for cross-device sync');
+    }
+} catch (e) {
+    console.log('Firebase not configured - using localStorage (device-specific)');
+}
+
+// Load data from Firebase or localStorage
+async function loadDataFromStorage() {
+    if (useFirebase && database) {
+        try {
+            // Load from Firebase (syncs across all devices)
+            const categoriesSnapshot = await database.ref('categories').once('value');
+            const productsSnapshot = await database.ref('products').once('value');
+            const ordersSnapshot = await database.ref('orders').once('value');
+            const offerBannerSnapshot = await database.ref('offerBanner').once('value');
+            
+            categories = categoriesSnapshot.val() || [];
+            products = productsSnapshot.val() || [];
+            orders = ordersSnapshot.val() || [];
+            offerBanner = offerBannerSnapshot.val() || null;
+            
+            // Also sync to localStorage as backup
+            localStorage.setItem('categories', JSON.stringify(categories));
+            localStorage.setItem('products', JSON.stringify(products));
+            localStorage.setItem('orders', JSON.stringify(orders));
+            localStorage.setItem('offerBanner', JSON.stringify(offerBanner));
+            
+            // Listen for real-time updates
+            database.ref('categories').on('value', (snapshot) => {
+                categories = snapshot.val() || [];
+                localStorage.setItem('categories', JSON.stringify(categories));
+                window.dispatchEvent(new CustomEvent('dataUpdated'));
+            });
+            
+            database.ref('products').on('value', (snapshot) => {
+                products = snapshot.val() || [];
+                localStorage.setItem('products', JSON.stringify(products));
+                window.dispatchEvent(new CustomEvent('dataUpdated'));
+            });
+            
+            database.ref('orders').on('value', (snapshot) => {
+                orders = snapshot.val() || [];
+                localStorage.setItem('orders', JSON.stringify(orders));
+            });
+            
+            database.ref('offerBanner').on('value', (snapshot) => {
+                offerBanner = snapshot.val() || null;
+                localStorage.setItem('offerBanner', JSON.stringify(offerBanner));
+                window.dispatchEvent(new CustomEvent('dataUpdated'));
+            });
+            
+        } catch (e) {
+            console.error('Firebase error, falling back to localStorage:', e);
+            useFirebase = false;
+            loadFromLocalStorage();
+        }
+    } else {
+        loadFromLocalStorage();
+    }
+}
+
+function loadFromLocalStorage() {
+    try {
+        const storedCategories = localStorage.getItem('categories');
+        if (storedCategories !== null && storedCategories !== undefined) {
+            const parsed = JSON.parse(storedCategories);
+            if (Array.isArray(parsed)) {
+                categories = parsed;
+            } else {
+                categories = [];
+                localStorage.setItem('categories', JSON.stringify(categories));
+            }
         } else {
-            // Invalid data, start empty
             categories = [];
             localStorage.setItem('categories', JSON.stringify(categories));
         }
-    } else {
-        // Key doesn't exist, start empty - admin will add categories
-        categories = [];
-        localStorage.setItem('categories', JSON.stringify(categories));
-    }
-} catch (e) {
-    console.error('Error loading categories:', e);
-    // On error, start empty
-    categories = [];
-    localStorage.setItem('categories', JSON.stringify(categories));
-}
-
-// Load products - No defaults, start empty
-let products = [];
-try {
-    const storedProducts = localStorage.getItem('products');
-    if (storedProducts !== null && storedProducts !== undefined) {
-        // Key exists, parse the data
-        const parsed = JSON.parse(storedProducts);
-        if (Array.isArray(parsed)) {
-            products = parsed; // Use saved data, even if empty array
+        
+        const storedProducts = localStorage.getItem('products');
+        if (storedProducts !== null && storedProducts !== undefined) {
+            const parsed = JSON.parse(storedProducts);
+            if (Array.isArray(parsed)) {
+                products = parsed;
+            } else {
+                products = [];
+                localStorage.setItem('products', JSON.stringify(products));
+            }
         } else {
-            // Invalid data, start empty
             products = [];
             localStorage.setItem('products', JSON.stringify(products));
         }
-    } else {
-        // Key doesn't exist, start empty - admin will add products
+    } catch (e) {
+        console.error('Error loading from localStorage:', e);
+        categories = [];
         products = [];
-        localStorage.setItem('products', JSON.stringify(products));
     }
-} catch (e) {
-    console.error('Error loading products:', e);
-    // On error, start empty
-    products = [];
-    localStorage.setItem('products', JSON.stringify(products));
 }
+
+// Initialize other data (user-specific, stored locally)
 let reviews = JSON.parse(localStorage.getItem('reviews')) || {};
-let offerBanner = JSON.parse(localStorage.getItem('offerBanner')) || null;
 let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 let userAddresses = JSON.parse(localStorage.getItem('userAddresses')) || {};
-let orders = JSON.parse(localStorage.getItem('orders')) || [];
+let offerBanner = null; // Will be loaded from Firebase/localStorage
+let orders = []; // Will be loaded from Firebase/localStorage
+
+// Initialize data loading (will populate categories, products, orders, offerBanner)
+loadDataFromStorage();
 
 // Secure data validation and sanitization
 function validateData() {
@@ -132,12 +195,53 @@ function validateData() {
     }
 }
 
-// Save data to localStorage with security measures
-function saveData() {
+// Save data to Firebase (for cross-device sync) or localStorage
+async function saveData() {
     try {
         // Validate and sanitize data before saving
         validateData();
         
+        // Save to Firebase if available (syncs across ALL devices)
+        if (useFirebase && database) {
+            try {
+                await database.ref('categories').set(categories);
+                await database.ref('products').set(products);
+                await database.ref('orders').set(orders);
+                await database.ref('offerBanner').set(offerBanner);
+                // Firebase automatically syncs to all devices in real-time
+            } catch (e) {
+                console.error('Firebase save error:', e);
+                // Fallback to localStorage
+                saveToLocalStorage();
+            }
+        } else {
+            saveToLocalStorage();
+        }
+        
+        // Always save user-specific data to localStorage (cart, currentUser, etc.)
+        localStorage.setItem('users', JSON.stringify(users));
+        localStorage.setItem('reviews', JSON.stringify(reviews));
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        localStorage.setItem('cart', JSON.stringify(cart));
+        localStorage.setItem('userAddresses', JSON.stringify(userAddresses));
+        
+        // Trigger custom event for same-tab updates
+        window.dispatchEvent(new CustomEvent('dataUpdated', { 
+            detail: { 
+                categories, 
+                products, 
+                offerBanner,
+                orders 
+            } 
+        }));
+    } catch (e) {
+        console.error('Error saving data:', e);
+        alert('Error saving data. Please try again.');
+    }
+}
+
+function saveToLocalStorage() {
+    try {
         // Check localStorage quota
         const testKey = '__storage_test__';
         try {
@@ -150,85 +254,86 @@ function saveData() {
             }
         }
         
-        // Save data with error handling
-        localStorage.setItem('users', JSON.stringify(users));
         localStorage.setItem('categories', JSON.stringify(categories));
         localStorage.setItem('products', JSON.stringify(products));
-        localStorage.setItem('reviews', JSON.stringify(reviews));
-        localStorage.setItem('offerBanner', JSON.stringify(offerBanner));
-        localStorage.setItem('currentUser', JSON.stringify(currentUser));
-        localStorage.setItem('cart', JSON.stringify(cart));
-        localStorage.setItem('userAddresses', JSON.stringify(userAddresses));
         localStorage.setItem('orders', JSON.stringify(orders));
-        
-        // Add timestamp for data integrity
+        localStorage.setItem('offerBanner', JSON.stringify(offerBanner));
         localStorage.setItem('lastUpdate', Date.now().toString());
         
         // Trigger storage event for cross-tab sync
         window.dispatchEvent(new Event('storage'));
-        
-        // Also trigger custom event for same-tab updates
-        window.dispatchEvent(new CustomEvent('dataUpdated', { 
-            detail: { 
-                categories, 
-                products, 
-                offerBanner,
-                orders 
-            } 
-        }));
     } catch (e) {
-        console.error('Error saving data:', e);
+        console.error('localStorage save error:', e);
         if (e.name === 'QuotaExceededError') {
-            alert('Storage quota exceeded. Please clear browser cache or contact support.');
-        } else {
-            alert('Error saving data. Please check browser storage permissions.');
+            alert('Storage quota exceeded. Please clear browser cache.');
         }
     }
 }
 
-// Reload data from localStorage
-function reloadData() {
-    try {
-        // Reload categories - always use what's in localStorage, even if empty
-        const storedCategories = localStorage.getItem('categories');
-        if (storedCategories !== null && storedCategories !== undefined) {
-            const parsed = JSON.parse(storedCategories);
-            if (Array.isArray(parsed)) {
-                categories = parsed; // Use saved data, even if empty
-            }
+// Reload data from Firebase or localStorage
+async function reloadData() {
+    if (useFirebase && database) {
+        try {
+            // Firebase automatically syncs, but we can force a refresh
+            const categoriesSnapshot = await database.ref('categories').once('value');
+            const productsSnapshot = await database.ref('products').once('value');
+            const ordersSnapshot = await database.ref('orders').once('value');
+            const offerBannerSnapshot = await database.ref('offerBanner').once('value');
+            
+            categories = categoriesSnapshot.val() || [];
+            products = productsSnapshot.val() || [];
+            orders = ordersSnapshot.val() || [];
+            offerBanner = offerBannerSnapshot.val() || null;
+            
+            // Update localStorage as backup
+            localStorage.setItem('categories', JSON.stringify(categories));
+            localStorage.setItem('products', JSON.stringify(products));
+            localStorage.setItem('orders', JSON.stringify(orders));
+            localStorage.setItem('offerBanner', JSON.stringify(offerBanner));
+        } catch (e) {
+            console.error('Firebase reload error:', e);
+            loadFromLocalStorage();
         }
-        
-        // Reload products - always use what's in localStorage, even if empty
-        const storedProducts = localStorage.getItem('products');
-        if (storedProducts !== null && storedProducts !== undefined) {
-            const parsed = JSON.parse(storedProducts);
-            if (Array.isArray(parsed)) {
-                products = parsed; // Use saved data, even if empty
+    } else {
+        // Reload from localStorage
+        try {
+            const storedCategories = localStorage.getItem('categories');
+            if (storedCategories !== null && storedCategories !== undefined) {
+                const parsed = JSON.parse(storedCategories);
+                if (Array.isArray(parsed)) {
+                    categories = parsed;
+                }
             }
-        }
-        
-        // Reload offer banner
-        const storedBanner = localStorage.getItem('offerBanner');
-        if (storedBanner !== null && storedBanner !== undefined) {
-            try {
-                offerBanner = JSON.parse(storedBanner);
-            } catch (e) {
+            
+            const storedProducts = localStorage.getItem('products');
+            if (storedProducts !== null && storedProducts !== undefined) {
+                const parsed = JSON.parse(storedProducts);
+                if (Array.isArray(parsed)) {
+                    products = parsed;
+                }
+            }
+            
+            const storedBanner = localStorage.getItem('offerBanner');
+            if (storedBanner !== null && storedBanner !== undefined) {
+                try {
+                    offerBanner = JSON.parse(storedBanner);
+                } catch (e) {
+                    offerBanner = null;
+                }
+            } else {
                 offerBanner = null;
             }
-        } else {
-            offerBanner = null;
-        }
-        
-        // Reload orders
-        const storedOrders = localStorage.getItem('orders');
-        if (storedOrders !== null && storedOrders !== undefined) {
-            const parsed = JSON.parse(storedOrders);
-            if (Array.isArray(parsed)) {
-                orders = parsed;
+            
+            const storedOrders = localStorage.getItem('orders');
+            if (storedOrders !== null && storedOrders !== undefined) {
+                const parsed = JSON.parse(storedOrders);
+                if (Array.isArray(parsed)) {
+                    orders = parsed;
+                }
             }
+        } catch (e) {
+            console.error('Error reloading data:', e);
         }
-    } catch (e) {
-        console.error('Error reloading data:', e);
     }
 }
 
@@ -766,7 +871,10 @@ function populateCategoryFilter() {
 }
 
 // Initialize page based on current page
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Wait for data to load (Firebase or localStorage)
+    await loadDataFromStorage();
+    
     updateNavigation();
     displayOfferBanner();
     
