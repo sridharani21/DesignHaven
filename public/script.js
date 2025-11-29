@@ -158,7 +158,12 @@ async function loadDataFromStorage() {
             console.log('👂 Listening for real-time updates from Firebase');
             
         } catch (e) {
-            console.error('Firebase error, falling back to localStorage:', e);
+            console.error('❌ Firebase error, falling back to localStorage:', e);
+            if (e.code === 'PERMISSION_DENIED' || e.message.includes('permission')) {
+                console.error('🔒 PERMISSION DENIED: Please update Firebase Database Rules!');
+                console.error('📖 See FIX_PERMISSION_ERROR.md for instructions');
+                console.error('🔗 Go to: https://console.firebase.google.com/project/designhaven-dcda4/database/rules');
+            }
             useFirebase = false;
             loadFromLocalStorage();
         }
@@ -384,7 +389,14 @@ async function reloadData() {
             localStorage.setItem('orders', JSON.stringify(orders));
             localStorage.setItem('offerBanner', JSON.stringify(offerBanner));
         } catch (e) {
-            console.error('Firebase reload error:', e);
+            console.error('❌ Firebase reload error:', e);
+            if (e.code === 'PERMISSION_DENIED' || e.message.includes('permission')) {
+                console.error('🔒 PERMISSION DENIED: Please update Firebase Database Rules!');
+                console.error('📖 See FIX_PERMISSION_ERROR.md for instructions');
+                console.error('🔗 Go to: https://console.firebase.google.com/project/designhaven-dcda4/database/rules');
+                // Don't keep retrying if permission is denied
+                useFirebase = false;
+            }
             loadFromLocalStorage();
         }
     } else {
