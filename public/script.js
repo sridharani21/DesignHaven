@@ -481,8 +481,12 @@ function updateNavigation() {
         if (isAdmin() && adminLink) {
             adminLink.style.display = 'block';
             adminLink.href = 'admin.html';
+            // Hide logout link for admin - admin cannot logout
+            if (logoutLink) logoutLink.style.display = 'none';
+        } else {
+            // Show logout link only for regular users
+            if (logoutLink) logoutLink.style.display = 'block';
         }
-        if (logoutLink) logoutLink.style.display = 'block';
     } else {
         if (loginLink) loginLink.style.display = 'block';
         if (adminLink) adminLink.style.display = 'none';
@@ -605,6 +609,8 @@ if (loginForm) {
         if (user) {
             currentUser = { name: user.name, email: user.email };
             await saveData();
+            // Update navigation before redirect
+            updateNavigation();
             window.location.href = 'index.html';
         } else {
             if (errorDiv) {
@@ -618,10 +624,23 @@ if (loginForm) {
 // Logout functionality
 const logoutLink = document.getElementById('logoutLink');
 if (logoutLink) {
-    logoutLink.addEventListener('click', (e) => {
+    logoutLink.addEventListener('click', async (e) => {
         e.preventDefault();
+        
+        // Prevent admin from logging out
+        if (isAdmin()) {
+            alert('Admin cannot logout. Please use a different account for testing.');
+            return;
+        }
+        
+        // Clear user session
         currentUser = null;
-        saveData();
+        await saveData();
+        
+        // Update navigation immediately
+        updateNavigation();
+        
+        // Redirect to home page
         window.location.href = 'index.html';
     });
 }
@@ -1038,7 +1057,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const currentPath = window.location.pathname.toLowerCase();
     const currentPage = currentPath.split('/').pop() || 'index.html';
     
-    // Check admin access - reload currentUser from localStorage first
+    // Reload currentUser from localStorage to ensure it's up to date
     const storedUser = localStorage.getItem('currentUser');
     if (storedUser) {
         try {
@@ -1046,8 +1065,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (e) {
             currentUser = null;
         }
+    } else {
+        currentUser = null;
     }
     
+    // Check admin access
     if (currentPage === 'admin.html' && !isAdmin()) {
         console.log('Admin access denied. Redirecting to login...');
         console.log('Current user:', currentUser);
@@ -1117,6 +1139,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const currentPath = window.location.pathname.toLowerCase();
         const currentPage = currentPath.split('/').pop() || 'index.html';
         
+        // Don't refresh if on orders or order-tracking pages to prevent blinking
+        if (currentPage === 'orders.html' || currentPage === 'order-tracking.html') {
+            return;
+        }
+        
         // Reload data first
         await reloadData();
         
@@ -1138,31 +1165,45 @@ document.addEventListener('DOMContentLoaded', async () => {
             loadProductsList();
             await loadAdminOrders();
             displayOfferBanner();
-        } else if (currentPage === 'orders.html') {
-            await loadOrders();
         }
     }
     
     // Listen for data updates in same tab
     window.addEventListener('dataUpdated', () => {
-        refreshPageContent();
+        // Only refresh content if not on orders/order-tracking pages (to prevent blinking)
+        const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+        if (currentPage !== 'orders.html' && currentPage !== 'order-tracking.html') {
+            refreshPageContent();
+        } else if (currentPage === 'orders.html') {
+            // Reload orders without refreshing images
+            loadOrders();
+        }
     });
     
-    // Set up periodic data refresh (every 1 second) to catch admin changes quickly
+    // Set up periodic data refresh (every 5 seconds) to catch admin changes
     // Only refresh if Firebase is working, otherwise it will keep retrying
+    // Increased interval to prevent image blinking
     setInterval(() => {
         if (!firebasePermissionDenied) {
             reloadData();
         }
-        refreshPageContent();
-    }, 1000);
+        // Only refresh content if not on orders page (to prevent blinking)
+        const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+        if (currentPage !== 'orders.html' && currentPage !== 'order-tracking.html') {
+            refreshPageContent();
+        }
+    }, 5000);
     
     // Also refresh on window focus (when user switches tabs/windows)
     window.addEventListener('focus', () => {
         if (!firebasePermissionDenied) {
             reloadData();
         }
-        refreshPageContent();
+        // Only refresh content if not on orders page (to prevent blinking)
+        const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+        if (currentPage !== 'orders.html' && currentPage !== 'order-tracking.html') {
+            refreshPageContent();
+        }
     });
     
     // Refresh when storage changes (cross-tab sync within same browser)
@@ -1171,7 +1212,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!firebasePermissionDenied) {
                 reloadData();
             }
-            refreshPageContent();
+            // Only refresh content if not on orders/order-tracking pages (to prevent blinking)
+            const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+            if (currentPage !== 'orders.html' && currentPage !== 'order-tracking.html') {
+                refreshPageContent();
+            } else if (currentPage === 'orders.html' && e.key === 'orders') {
+                // Reload orders when orders data changes
+                loadOrders();
+            }
         }
     });
 });
@@ -1479,7 +1527,7 @@ if (placeOrderBtn) {
         const amount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         const order = {
             id: orderId,
-            userId: currentUser ? currentUser.email : 'guest',
+            userId: currentUser ? (currentUser.email || currentUser.name) : 'guest',
             items: [...cart],
             address: {
                 fullName: document.getElementById('fullName').value,
@@ -1632,16 +1680,41 @@ function loadOrderTracking() {
     `;
 }
 
-function loadOrders() {
+async function loadOrders() {
     const container = document.getElementById('ordersList');
     if (!container) return;
+    
+    // Reload orders data first to ensure we have the latest
+    await reloadData();
+    
+    // Also reload currentUser from localStorage
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+        try {
+            currentUser = JSON.parse(storedUser);
+        } catch (e) {
+            currentUser = null;
+        }
+    }
     
     if (!currentUser) {
         container.innerHTML = '<p>Please login to view your orders.</p>';
         return;
     }
     
-    const userOrders = orders.filter(o => o.userId === currentUser.email).reverse();
+    console.log('Loading orders for user:', currentUser.email || currentUser.name);
+    console.log('Total orders in database:', orders.length);
+    
+    // Filter orders by userId - check both email and name
+    const userOrders = orders.filter(o => {
+        if (!o || !o.userId) return false;
+        const userId = o.userId.toLowerCase();
+        const userEmail = (currentUser.email || '').toLowerCase();
+        const userName = (currentUser.name || '').toLowerCase();
+        return userId === userEmail || userId === userName;
+    }).reverse();
+    
+    console.log('User orders found:', userOrders.length);
     
     if (userOrders.length === 0) {
         container.innerHTML = `
