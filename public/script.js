@@ -23,6 +23,7 @@ let products = [];
 // Check if Firebase is available and configured
 let useFirebase = false;
 let database = null;
+let firebasePermissionDenied = false; // Flag to prevent retrying after permission denied
 
 // Get firebaseConfig from global scope (defined in firebase-config.js)
 let firebaseConfig = window.firebaseConfig || null;
@@ -87,12 +88,18 @@ function initFirebase() {
 
 // Load data from Firebase or localStorage
 async function loadDataFromStorage() {
+    // Don't try Firebase if permission was denied
+    if (firebasePermissionDenied) {
+        loadFromLocalStorage();
+        return;
+    }
+    
     // Ensure Firebase is initialized
     if (!useFirebase && typeof firebase !== 'undefined') {
         initFirebase();
     }
     
-    if (useFirebase && database) {
+    if (useFirebase && database && !firebasePermissionDenied) {
         try {
             // Load from Firebase (syncs across all devices)
             const categoriesSnapshot = await database.ref('categories').once('value');
@@ -158,13 +165,18 @@ async function loadDataFromStorage() {
             console.log('👂 Listening for real-time updates from Firebase');
             
         } catch (e) {
-            console.error('❌ Firebase error, falling back to localStorage:', e);
             if (e.code === 'PERMISSION_DENIED' || e.message.includes('permission')) {
-                console.error('🔒 PERMISSION DENIED: Please update Firebase Database Rules!');
-                console.error('📖 See FIX_PERMISSION_ERROR.md for instructions');
-                console.error('🔗 Go to: https://console.firebase.google.com/project/designhaven-dcda4/database/rules');
+                if (!firebasePermissionDenied) {
+                    console.error('🔒 PERMISSION DENIED: Please update Firebase Database Rules!');
+                    console.error('📖 See FIX_PERMISSION_ERROR.md for instructions');
+                    console.error('🔗 Go to: https://console.firebase.google.com/project/designhaven-dcda4/database/rules');
+                    console.error('⚠️ Firebase disabled. Using localStorage only until rules are fixed.');
+                    firebasePermissionDenied = true;
+                    useFirebase = false;
+                }
+            } else {
+                console.error('❌ Firebase error, falling back to localStorage:', e);
             }
-            useFirebase = false;
             loadFromLocalStorage();
         }
     } else {
@@ -389,13 +401,18 @@ async function reloadData() {
             localStorage.setItem('orders', JSON.stringify(orders));
             localStorage.setItem('offerBanner', JSON.stringify(offerBanner));
         } catch (e) {
-            console.error('❌ Firebase reload error:', e);
             if (e.code === 'PERMISSION_DENIED' || e.message.includes('permission')) {
-                console.error('🔒 PERMISSION DENIED: Please update Firebase Database Rules!');
-                console.error('📖 See FIX_PERMISSION_ERROR.md for instructions');
-                console.error('🔗 Go to: https://console.firebase.google.com/project/designhaven-dcda4/database/rules');
-                // Don't keep retrying if permission is denied
-                useFirebase = false;
+                if (!firebasePermissionDenied) {
+                    console.error('🔒 PERMISSION DENIED: Please update Firebase Database Rules!');
+                    console.error('📖 See FIX_PERMISSION_ERROR.md for instructions');
+                    console.error('🔗 Go to: https://console.firebase.google.com/project/designhaven-dcda4/database/rules');
+                    console.error('⚠️ Firebase disabled. Using localStorage only until rules are fixed.');
+                    firebasePermissionDenied = true;
+                    useFirebase = false;
+                }
+                // Don't log the error repeatedly
+            } else {
+                console.error('❌ Firebase reload error:', e);
             }
             loadFromLocalStorage();
         }
@@ -831,11 +848,17 @@ function resetCategoryForm() {
 
 const categoryForm = document.getElementById('categoryForm');
 if (categoryForm) {
-    categoryForm.addEventListener('submit', (e) => {
+    categoryForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('categoryId').value;
         const name = document.getElementById('categoryName').value;
         const image = document.getElementById('categoryImage').value;
+        
+        // Validate required fields
+        if (!name || !image) {
+            alert('Please fill in all required fields (Name and Image)');
+            return;
+        }
         
         if (id) {
             // Update existing
@@ -849,7 +872,13 @@ if (categoryForm) {
             categories.push({ id: newId, name, image });
         }
         
-        saveData();
+        // Wait for data to be saved before refreshing the list
+        await saveData();
+        
+        // Reload data to ensure we have the latest
+        await reloadData();
+        
+        // Now refresh the UI
         loadCategoriesList();
         resetCategoryForm();
         alert('Category saved successfully! Changes will be reflected on customer pages.');
@@ -911,7 +940,7 @@ function resetProductForm() {
 
 const productForm = document.getElementById('productForm');
 if (productForm) {
-    productForm.addEventListener('submit', (e) => {
+    productForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('productId').value;
         const name = document.getElementById('productName').value;
@@ -919,6 +948,12 @@ if (productForm) {
         const category = document.getElementById('productCategory').value;
         const image = document.getElementById('productImage').value;
         const description = document.getElementById('productDescription').value;
+        
+        // Validate required fields
+        if (!name || !price || !category || !image) {
+            alert('Please fill in all required fields (Name, Price, Category, Image)');
+            return;
+        }
         
         if (id) {
             // Update existing
@@ -932,7 +967,13 @@ if (productForm) {
             products.push({ id: newId, name, price, category, image, description });
         }
         
-        saveData();
+        // Wait for data to be saved before refreshing the list
+        await saveData();
+        
+        // Reload data to ensure we have the latest (especially if Firebase is being used)
+        await reloadData();
+        
+        // Now refresh the UI
         loadProductsList();
         resetProductForm();
         alert('Product saved successfully! Changes will be reflected on customer pages.');
@@ -1091,21 +1132,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     
     // Set up periodic data refresh (every 1 second) to catch admin changes quickly
+    // Only refresh if Firebase is working, otherwise it will keep retrying
     setInterval(() => {
-        reloadData();
+        if (!firebasePermissionDenied) {
+            reloadData();
+        }
         refreshPageContent();
     }, 1000);
     
     // Also refresh on window focus (when user switches tabs/windows)
     window.addEventListener('focus', () => {
-        reloadData();
+        if (!firebasePermissionDenied) {
+            reloadData();
+        }
         refreshPageContent();
     });
     
     // Refresh when storage changes (cross-tab sync within same browser)
     window.addEventListener('storage', (e) => {
         if (e.key === 'categories' || e.key === 'products' || e.key === 'offerBanner' || e.key === 'orders') {
-            reloadData();
+            if (!firebasePermissionDenied) {
+                reloadData();
+            }
             refreshPageContent();
         }
     });
