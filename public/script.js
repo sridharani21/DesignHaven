@@ -24,14 +24,37 @@ let products = [];
 let useFirebase = false;
 let database = null;
 
+// Get firebaseConfig from global scope (defined in firebase-config.js)
+let firebaseConfig = window.firebaseConfig || null;
+
 // Wait for Firebase to be ready
 function initFirebase() {
     try {
         if (typeof firebase !== 'undefined' && firebase.database) {
-            database = firebase.database();
-            useFirebase = true;
-            console.log('✅ Firebase connected - using cloud database for cross-device sync');
-            return true;
+            // Make sure Firebase app is initialized
+            try {
+                const app = firebase.app();
+                database = firebase.database();
+                useFirebase = true;
+                console.log('✅ Firebase connected - using cloud database for cross-device sync');
+                if (firebaseConfig && firebaseConfig.databaseURL) {
+                    console.log('📡 Database URL:', firebaseConfig.databaseURL);
+                }
+                return true;
+            } catch (appError) {
+                console.error('❌ Firebase app not initialized:', appError);
+                // Try to initialize
+                if (firebase.initializeApp && firebaseConfig) {
+                    firebase.initializeApp(firebaseConfig);
+                    database = firebase.database();
+                    useFirebase = true;
+                    console.log('✅ Firebase initialized and connected');
+                    return true;
+                } else {
+                    console.error('❌ Cannot initialize Firebase: config not found');
+                }
+                return false;
+            }
         } else {
             console.log('⚠️ Firebase not available - using localStorage (device-specific)');
             return false;
@@ -43,15 +66,24 @@ function initFirebase() {
     }
 }
 
-// Initialize Firebase connection
-if (typeof firebase !== 'undefined') {
-    // Firebase SDK is loaded, try to connect
-    setTimeout(() => {
-        initFirebase();
-    }, 100); // Small delay to ensure Firebase is fully loaded
-} else {
-    console.log('⚠️ Firebase SDK not loaded - using localStorage only');
-}
+// Initialize Firebase connection - wait for everything to load
+(function() {
+    function tryInitFirebase() {
+        if (typeof firebase !== 'undefined') {
+            initFirebase();
+        } else {
+            // Retry after a delay
+            setTimeout(tryInitFirebase, 200);
+        }
+    }
+    
+    // Start trying to initialize
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', tryInitFirebase);
+    } else {
+        setTimeout(tryInitFirebase, 100);
+    }
+})();
 
 // Load data from Firebase or localStorage
 async function loadDataFromStorage() {
@@ -79,29 +111,51 @@ async function loadDataFromStorage() {
             localStorage.setItem('orders', JSON.stringify(orders));
             localStorage.setItem('offerBanner', JSON.stringify(offerBanner));
             
-            // Listen for real-time updates
+            // Listen for real-time updates (remove old listeners first to avoid duplicates)
+            database.ref('categories').off(); // Remove old listeners
             database.ref('categories').on('value', (snapshot) => {
-                categories = snapshot.val() || [];
-                localStorage.setItem('categories', JSON.stringify(categories));
-                window.dispatchEvent(new CustomEvent('dataUpdated'));
+                const newCategories = snapshot.val() || [];
+                if (JSON.stringify(categories) !== JSON.stringify(newCategories)) {
+                    categories = newCategories;
+                    localStorage.setItem('categories', JSON.stringify(categories));
+                    console.log('🔄 Categories updated from Firebase');
+                    window.dispatchEvent(new CustomEvent('dataUpdated'));
+                }
             });
             
+            database.ref('products').off(); // Remove old listeners
             database.ref('products').on('value', (snapshot) => {
-                products = snapshot.val() || [];
-                localStorage.setItem('products', JSON.stringify(products));
-                window.dispatchEvent(new CustomEvent('dataUpdated'));
+                const newProducts = snapshot.val() || [];
+                if (JSON.stringify(products) !== JSON.stringify(newProducts)) {
+                    products = newProducts;
+                    localStorage.setItem('products', JSON.stringify(products));
+                    console.log('🔄 Products updated from Firebase');
+                    window.dispatchEvent(new CustomEvent('dataUpdated'));
+                }
             });
             
+            database.ref('orders').off(); // Remove old listeners
             database.ref('orders').on('value', (snapshot) => {
-                orders = snapshot.val() || [];
-                localStorage.setItem('orders', JSON.stringify(orders));
+                const newOrders = snapshot.val() || [];
+                if (JSON.stringify(orders) !== JSON.stringify(newOrders)) {
+                    orders = newOrders;
+                    localStorage.setItem('orders', JSON.stringify(orders));
+                    console.log('🔄 Orders updated from Firebase');
+                }
             });
             
+            database.ref('offerBanner').off(); // Remove old listeners
             database.ref('offerBanner').on('value', (snapshot) => {
-                offerBanner = snapshot.val() || null;
-                localStorage.setItem('offerBanner', JSON.stringify(offerBanner));
-                window.dispatchEvent(new CustomEvent('dataUpdated'));
+                const newBanner = snapshot.val() || null;
+                if (JSON.stringify(offerBanner) !== JSON.stringify(newBanner)) {
+                    offerBanner = newBanner;
+                    localStorage.setItem('offerBanner', JSON.stringify(offerBanner));
+                    console.log('🔄 Offer banner updated from Firebase');
+                    window.dispatchEvent(new CustomEvent('dataUpdated'));
+                }
             });
+            
+            console.log('👂 Listening for real-time updates from Firebase');
             
         } catch (e) {
             console.error('Firebase error, falling back to localStorage:', e);
@@ -233,17 +287,22 @@ async function saveData() {
         // Save to Firebase if available (syncs across ALL devices)
         if (useFirebase && database) {
             try {
+                console.log('💾 Saving to Firebase...');
                 await database.ref('categories').set(categories);
                 await database.ref('products').set(products);
                 await database.ref('orders').set(orders);
                 await database.ref('offerBanner').set(offerBanner);
-                // Firebase automatically syncs to all devices in real-time
+                console.log('✅ Data saved to Firebase - will sync to all devices');
+                // Also save to localStorage as backup
+                saveToLocalStorage();
             } catch (e) {
-                console.error('Firebase save error:', e);
+                console.error('❌ Firebase save error:', e);
+                console.error('Error details:', e.message, e.code);
                 // Fallback to localStorage
                 saveToLocalStorage();
             }
         } else {
+            console.log('💾 Saving to localStorage only (Firebase not available)');
             saveToLocalStorage();
         }
         
