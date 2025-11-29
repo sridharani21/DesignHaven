@@ -574,16 +574,22 @@ if (registerForm) {
 // Login functionality
 const loginForm = document.getElementById('loginForm');
 if (loginForm) {
-    loginForm.addEventListener('submit', (e) => {
+    loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const emailOrName = document.getElementById('loginEmail').value.trim();
         const password = document.getElementById('loginPassword').value;
         const errorDiv = document.getElementById('loginError');
         
+        // Clear any previous errors
+        if (errorDiv) {
+            errorDiv.style.display = 'none';
+        }
+        
         // Check for admin login (case-insensitive name check)
         if (emailOrName.toLowerCase() === 'sridharani' && password === 'xyz@@21') {
             currentUser = { name: 'sridharani', email: 'admin@designhaven.com' };
-            saveData();
+            await saveData();
+            console.log('Admin login successful');
             window.location.href = 'admin.html';
             return;
         }
@@ -598,7 +604,7 @@ if (loginForm) {
         
         if (user) {
             currentUser = { name: user.name, email: user.email };
-            saveData();
+            await saveData();
             window.location.href = 'index.html';
         } else {
             if (errorDiv) {
@@ -1032,8 +1038,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     const currentPath = window.location.pathname.toLowerCase();
     const currentPage = currentPath.split('/').pop() || 'index.html';
     
-    // Check admin access
+    // Check admin access - reload currentUser from localStorage first
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+        try {
+            currentUser = JSON.parse(storedUser);
+        } catch (e) {
+            currentUser = null;
+        }
+    }
+    
     if (currentPage === 'admin.html' && !isAdmin()) {
+        console.log('Admin access denied. Redirecting to login...');
+        console.log('Current user:', currentUser);
         window.location.href = 'login.html';
         return;
     }
