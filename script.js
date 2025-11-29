@@ -175,6 +175,12 @@ function updateNavigation() {
     const loginLink = document.getElementById('loginLink');
     const adminLink = document.getElementById('adminLink');
     const logoutLink = document.getElementById('logoutLink');
+    const ordersLink = document.getElementById('ordersLink');
+    
+    // Always show "My Orders" link
+    if (ordersLink) {
+        ordersLink.style.display = 'block';
+    }
     
     if (currentUser) {
         if (loginLink) loginLink.style.display = 'none';
@@ -743,11 +749,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Mobile menu toggle
-    const mobileToggle = document.querySelector('.mobile-menu-toggle');
-    const navMenu = document.querySelector('.nav-menu');
+    const mobileToggle = document.getElementById('mobileMenuToggle') || document.querySelector('.mobile-menu-toggle');
+    const navMenu = document.getElementById('navMenu') || document.querySelector('.nav-menu');
     if (mobileToggle && navMenu) {
         mobileToggle.addEventListener('click', () => {
             navMenu.classList.toggle('active');
+            mobileToggle.classList.toggle('active');
+        });
+        
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!navMenu.contains(e.target) && !mobileToggle.contains(e.target)) {
+                navMenu.classList.remove('active');
+                mobileToggle.classList.remove('active');
+            }
         });
     }
     
