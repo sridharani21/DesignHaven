@@ -88,9 +88,84 @@ let cart = JSON.parse(localStorage.getItem('cart')) || [];
 let userAddresses = JSON.parse(localStorage.getItem('userAddresses')) || {};
 let orders = JSON.parse(localStorage.getItem('orders')) || [];
 
-// Save data to localStorage
+// Secure data validation and sanitization
+function validateData() {
+    // Validate users array
+    if (!Array.isArray(users)) {
+        users = [];
+    }
+    users = users.filter(u => {
+        if (!u || typeof u !== 'object') return false;
+        if (!u.email || typeof u.email !== 'string' || u.email.length > 100) return false;
+        if (!u.name || typeof u.name !== 'string' || u.name.length > 100) return false;
+        if (!u.password || typeof u.password !== 'string' || u.password.length > 200) return false;
+        return true;
+    });
+    
+    // Validate categories array
+    if (!Array.isArray(categories)) {
+        categories = [];
+    }
+    categories = categories.filter(c => {
+        if (!c || typeof c !== 'object') return false;
+        if (!c.id || typeof c.id !== 'number') return false;
+        if (!c.name || typeof c.name !== 'string' || c.name.length > 100) return false;
+        if (!c.image || typeof c.image !== 'string' || c.image.length > 500) return false;
+        return true;
+    });
+    
+    // Validate products array
+    if (!Array.isArray(products)) {
+        products = [];
+    }
+    products = products.filter(p => {
+        if (!p || typeof p !== 'object') return false;
+        if (!p.id || typeof p.id !== 'number') return false;
+        if (!p.name || typeof p.name !== 'string' || p.name.length > 200) return false;
+        if (typeof p.price !== 'number' || p.price < 0 || p.price > 1000000) return false;
+        if (!p.category || typeof p.category !== 'string' || p.category.length > 100) return false;
+        if (!p.image || typeof p.image !== 'string' || p.image.length > 500) return false;
+        if (p.description && (typeof p.description !== 'string' || p.description.length > 1000)) return false;
+        return true;
+    });
+    
+    // Validate orders array
+    if (!Array.isArray(orders)) {
+        orders = [];
+    }
+    orders = orders.filter(o => {
+        if (!o || typeof o !== 'object') return false;
+        if (!o.id || typeof o.id !== 'string' || o.id.length > 50) return false;
+        if (typeof o.amount !== 'number' || o.amount < 0 || o.amount > 1000000) return false;
+        if (!Array.isArray(o.items)) return false;
+        return true;
+    });
+    
+    // Validate offer banner
+    if (offerBanner && (typeof offerBanner !== 'object' || typeof offerBanner.text !== 'string' || offerBanner.text.length > 200)) {
+        offerBanner = null;
+    }
+}
+
+// Save data to localStorage with security measures
 function saveData() {
     try {
+        // Validate and sanitize data before saving
+        validateData();
+        
+        // Check localStorage quota
+        const testKey = '__storage_test__';
+        try {
+            localStorage.setItem(testKey, 'test');
+            localStorage.removeItem(testKey);
+        } catch (e) {
+            if (e.name === 'QuotaExceededError') {
+                alert('Storage quota exceeded. Please clear some data.');
+                return;
+            }
+        }
+        
+        // Save data with error handling
         localStorage.setItem('users', JSON.stringify(users));
         localStorage.setItem('categories', JSON.stringify(categories));
         localStorage.setItem('products', JSON.stringify(products));
@@ -100,6 +175,9 @@ function saveData() {
         localStorage.setItem('cart', JSON.stringify(cart));
         localStorage.setItem('userAddresses', JSON.stringify(userAddresses));
         localStorage.setItem('orders', JSON.stringify(orders));
+        
+        // Add timestamp for data integrity
+        localStorage.setItem('lastUpdate', Date.now().toString());
         
         // Trigger storage event for cross-tab sync
         window.dispatchEvent(new Event('storage'));
@@ -115,7 +193,11 @@ function saveData() {
         }));
     } catch (e) {
         console.error('Error saving data:', e);
-        alert('Error saving data. Please check browser storage permissions.');
+        if (e.name === 'QuotaExceededError') {
+            alert('Storage quota exceeded. Please clear browser cache or contact support.');
+        } else {
+            alert('Error saving data. Please check browser storage permissions.');
+        }
     }
 }
 
@@ -983,8 +1065,8 @@ function generateQRWithAPI(upiString, canvas) {
     };
 }
 
-function openPaymentApp(app) {
-    const amount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+function openPaymentApp(app, customAmount = null) {
+    const amount = customAmount !== null ? customAmount : cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const upiId = 'sridharani916@okaxis';
     
     let url = '';
@@ -1008,6 +1090,10 @@ function openPaymentApp(app) {
             window.location.href = upiString;
         }, 500);
     }
+}
+
+function openPaymentAppForOrder(app, amount) {
+    openPaymentApp(app, amount);
 }
 
 // Checkout form submission
@@ -1217,14 +1303,22 @@ function loadOrders() {
     userOrders.forEach(order => {
         const orderCard = document.createElement('div');
         orderCard.className = 'order-card';
+        const isCOD = order.paymentMethod === 'cod';
+        const paymentStatusBadge = isCOD ? 
+            '<span class="payment-badge payment-pending" style="margin-left: 1rem;">Cash on Delivery</span>' : 
+            '<span class="payment-badge payment-paid" style="margin-left: 1rem;">Paid Online</span>';
+        
         orderCard.innerHTML = `
             <div class="order-card-header">
                 <div>
                     <h3>Order ${order.id}</h3>
                     <p class="order-date">${new Date(order.date).toLocaleDateString()}</p>
                 </div>
-                <div class="order-status-badge status-${order.status.replace(/\s+/g, '-')}">
-                    ${order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div class="order-status-badge status-${order.status.replace(/\s+/g, '-')}">
+                        ${order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                    </div>
+                    ${paymentStatusBadge}
                 </div>
             </div>
             <div class="order-card-body">
@@ -1236,13 +1330,114 @@ function loadOrders() {
                 </div>
                 <div class="order-card-footer">
                     <span class="order-amount">₹${order.amount.toLocaleString('en-IN')}</span>
-                    <a href="order-tracking.html?id=${order.id}" class="btn-secondary">Track Order</a>
+                    <div style="display: flex; gap: 0.5rem;">
+                        ${isCOD && order.status !== 'delivered' ? 
+                            `<button class="btn-primary" onclick="convertToOnlinePayment('${order.id}')">Pay Online</button>` : 
+                            ''
+                        }
+                        <a href="order-tracking.html?id=${order.id}" class="btn-secondary">Track Order</a>
+                    </div>
                 </div>
             </div>
         `;
         container.appendChild(orderCard);
     });
 }
+
+function convertToOnlinePayment(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (!order || order.paymentMethod !== 'cod') {
+        alert('Invalid order or already paid online.');
+        return;
+    }
+    
+    if (confirm(`Convert order ${orderId} to online payment? Amount: ₹${order.amount.toLocaleString('en-IN')}`)) {
+        // Show payment QR code
+        const amount = order.amount;
+        const upiId = 'sridharani916@okaxis';
+        
+        // Create payment modal
+        const paymentModal = document.createElement('div');
+        paymentModal.className = 'payment-modal';
+        paymentModal.innerHTML = `
+            <div class="payment-modal-content">
+                <h2>Pay for Order ${orderId}</h2>
+                <div class="payment-qr-section">
+                    <div class="qr-code-container">
+                        <canvas id="paymentQRCode"></canvas>
+                    </div>
+                    <p class="upi-id">UPI ID: ${upiId}</p>
+                    <p class="amount-display">Amount: ₹${amount.toLocaleString('en-IN')}</p>
+                    <div class="payment-apps">
+                        <button class="payment-app-btn" onclick="openPaymentAppForOrder('gpay', ${amount})">Pay with Google Pay</button>
+                        <button class="payment-app-btn" onclick="openPaymentAppForOrder('phonepe', ${amount})">Pay with PhonePe</button>
+                        <button class="payment-app-btn" onclick="openPaymentAppForOrder('paytm', ${amount})">Pay with Paytm</button>
+                    </div>
+                    <button class="btn-primary btn-full" onclick="confirmOnlinePayment('${orderId}')">I've Paid</button>
+                    <button class="btn-secondary btn-full" onclick="closePaymentModal()" style="margin-top: 0.5rem;">Cancel</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(paymentModal);
+        
+        // Generate QR code
+        setTimeout(() => {
+            generateUPIQRForOrder(amount, 'paymentQRCode');
+        }, 100);
+    }
+}
+
+function generateUPIQRForOrder(amount, canvasId) {
+    const upiId = 'sridharani916@okaxis';
+    const upiString = `upi://pay?pa=${upiId}&pn=DesignHaven&am=${amount}&cu=INR`;
+    const canvas = document.getElementById(canvasId);
+    
+    if (!canvas) return;
+    
+    if (typeof QRCode !== 'undefined') {
+        try {
+            QRCode.toCanvas(canvas, upiString, {
+                width: 250,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF'
+                }
+            }, (error) => {
+                if (error) {
+                    generateQRWithAPI(upiString, canvas);
+                }
+            });
+        } catch (e) {
+            generateQRWithAPI(upiString, canvas);
+        }
+    } else {
+        generateQRWithAPI(upiString, canvas);
+    }
+}
+
+function confirmOnlinePayment(orderId) {
+    const order = orders.find(o => o.id === orderId);
+    if (order) {
+        order.paymentMethod = 'online';
+        saveData();
+        alert('Payment method updated to online!');
+        closePaymentModal();
+        loadOrders();
+    }
+}
+
+function closePaymentModal() {
+    const modal = document.querySelector('.payment-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+window.convertToOnlinePayment = convertToOnlinePayment;
+window.confirmOnlinePayment = confirmOnlinePayment;
+window.closePaymentModal = closePaymentModal;
+window.openPaymentAppForOrder = openPaymentAppForOrder;
 
 function loadAdminOrders() {
     const container = document.getElementById('ordersList');
