@@ -15,22 +15,7 @@ try {
     users = [];
     localStorage.setItem('users', JSON.stringify(users));
 }
-// Default data (only used if localStorage is completely empty)
-const defaultCategories = [
-    { id: 1, name: 'Posters', image: 'https://images.unsplash.com/photo-1584824486509-112e4181ff6b?w=400' },
-    { id: 2, name: 'Customized Designs', image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400' },
-    { id: 3, name: 'Wall Art', image: 'https://images.unsplash.com/photo-1578301978018-3005759f48f7?w=400' },
-    { id: 4, name: 'Digital Prints', image: 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400' }
-];
-
-const defaultProducts = [
-    { id: 1, name: 'Vintage Poster Collection', price: 2499, category: 'Posters', image: 'https://images.unsplash.com/photo-1584824486509-112e4181ff6b?w=400', description: 'Beautiful vintage-inspired poster collection perfect for any room.' },
-    { id: 2, name: 'Custom Portrait Design', price: 4199, category: 'Customized Designs', image: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400', description: 'Personalized portrait design created just for you.' },
-    { id: 3, name: 'Modern Abstract Art', price: 3399, category: 'Wall Art', image: 'https://images.unsplash.com/photo-1578301978018-3005759f48f7?w=400', description: 'Contemporary abstract art piece to enhance your space.' },
-    { id: 4, name: 'Nature Photography Print', price: 2099, category: 'Digital Prints', image: 'https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=400', description: 'High-quality nature photography print in stunning detail.' }
-];
-
-// Load categories - ONLY use defaults if localStorage key doesn't exist at all
+// Load categories - No defaults, start empty
 let categories = [];
 try {
     const storedCategories = localStorage.getItem('categories');
@@ -40,23 +25,23 @@ try {
         if (Array.isArray(parsed)) {
             categories = parsed; // Use saved data, even if empty array
         } else {
-            // Invalid data, use defaults
-            categories = [...defaultCategories];
+            // Invalid data, start empty
+            categories = [];
             localStorage.setItem('categories', JSON.stringify(categories));
         }
     } else {
-        // Key doesn't exist, first time - use defaults
-        categories = [...defaultCategories];
+        // Key doesn't exist, start empty - admin will add categories
+        categories = [];
         localStorage.setItem('categories', JSON.stringify(categories));
     }
 } catch (e) {
     console.error('Error loading categories:', e);
-    // On error, use defaults
-    categories = [...defaultCategories];
+    // On error, start empty
+    categories = [];
     localStorage.setItem('categories', JSON.stringify(categories));
 }
 
-// Load products - ONLY use defaults if localStorage key doesn't exist at all
+// Load products - No defaults, start empty
 let products = [];
 try {
     const storedProducts = localStorage.getItem('products');
@@ -66,19 +51,19 @@ try {
         if (Array.isArray(parsed)) {
             products = parsed; // Use saved data, even if empty array
         } else {
-            // Invalid data, use defaults
-            products = [...defaultProducts];
+            // Invalid data, start empty
+            products = [];
             localStorage.setItem('products', JSON.stringify(products));
         }
     } else {
-        // Key doesn't exist, first time - use defaults
-        products = [...defaultProducts];
+        // Key doesn't exist, start empty - admin will add products
+        products = [];
         localStorage.setItem('products', JSON.stringify(products));
     }
 } catch (e) {
     console.error('Error loading products:', e);
-    // On error, use defaults
-    products = [...defaultProducts];
+    // On error, start empty
+    products = [];
     localStorage.setItem('products', JSON.stringify(products));
 }
 let reviews = JSON.parse(localStorage.getItem('reviews')) || {};
@@ -850,6 +835,62 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Update cart count on all pages
     updateCartCount();
+    
+    // Refresh page content when data is updated
+    function refreshPageContent() {
+        const currentPath = window.location.pathname.toLowerCase();
+        const currentPage = currentPath.split('/').pop() || 'index.html';
+        
+        // Reload data first
+        reloadData();
+        
+        // Refresh display based on current page
+        if (currentPage === 'index.html' || currentPage === '' || !currentPage.includes('.')) {
+            loadCategories('categoriesGrid');
+            loadProducts('productsGrid');
+            displayOfferBanner();
+        } else if (currentPage === 'categories.html') {
+            loadCategories('categoriesGridLarge');
+        } else if (currentPage === 'products.html') {
+            const urlParams = new URLSearchParams(window.location.search);
+            const category = urlParams.get('category');
+            loadProducts('productsGridPage', category);
+        } else if (currentPage === 'product-detail.html') {
+            loadProductDetail();
+        } else if (currentPage === 'admin.html') {
+            loadCategoriesList();
+            loadProductsList();
+            loadAdminOrders();
+            displayOfferBanner();
+        } else if (currentPage === 'orders.html') {
+            loadOrders();
+        }
+    }
+    
+    // Listen for data updates in same tab
+    window.addEventListener('dataUpdated', () => {
+        refreshPageContent();
+    });
+    
+    // Set up periodic data refresh (every 1 second) to catch admin changes quickly
+    setInterval(() => {
+        reloadData();
+        refreshPageContent();
+    }, 1000);
+    
+    // Also refresh on window focus (when user switches tabs/windows)
+    window.addEventListener('focus', () => {
+        reloadData();
+        refreshPageContent();
+    });
+    
+    // Refresh when storage changes (cross-tab sync within same browser)
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'categories' || e.key === 'products' || e.key === 'offerBanner' || e.key === 'orders') {
+            reloadData();
+            refreshPageContent();
+        }
+    });
 });
 
 // Cart Functions
